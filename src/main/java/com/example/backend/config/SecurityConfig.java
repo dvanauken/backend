@@ -1,11 +1,14 @@
 package com.example.backend.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -14,36 +17,44 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
-    @Override
-    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.inMemoryAuthentication()
-                .withUser("admin")
-                .password("{noop}admin")
-                .roles("ADMIN");
-    }
+//    private final CustomUserDetailsService customUserDetailsService;
+
+//    @Autowired
+//    public SecurityConfig(CustomUserDetailsService customUserDetailsService) {
+//        this.customUserDetailsService = customUserDetailsService;
+//    }
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http
-                .csrf().disable()
-                .cors()
+            .authorizeRequests()
+                .antMatchers("/api/flights").hasAuthority("GUEST")
+                .antMatchers("/api/airports").hasAuthority("CUSTOMER")
+                .anyRequest().authenticated() // Require authentication for all other requests
                 .and()
-                .authorizeRequests()
-                //.antMatchers("/login").permitAll()  // Allow unauthenticated access to /login
-                .anyRequest().authenticated()
-                .and()
-                .httpBasic();
+            .httpBasic(); // Use basic authentication
     }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+//    @Bean
+//    public PasswordEncoder passwordEncoder() {
+//        return NoOpPasswordEncoder.getInstance();
+//    }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.addAllowedOrigin("*"); // Update this with your frontend URL
+        configuration.addAllowedOrigin("*");
         configuration.addAllowedMethod("*");
         configuration.addAllowedHeader("*");
+        configuration.setAllowCredentials(true);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-
 }
